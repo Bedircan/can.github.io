@@ -1,0 +1,30 @@
+__global__ void maxGPU(double *a, int count, double *result) { 
+ 
+   __shared__ double cache[threadsPerBlock]; 
+ 
+   int tid = threadIdx.x + blockIdx.x * blockDim.x;    int cacheIndex = threadIdx.x; 
+ 
+   double temp = a[tid];    tid += blockDim.x * gridDim.x; 
+ 
+   while (tid < count) {
+   if (a[tid] > temp)       
+   temp = a[tid];      
+   tid += blockDim.x * gridDim.x;  
+   } 
+ 
+   // set the cache values    cache[cacheIndex] = temp; 
+ 
+   // synchronize threads in this block    __syncthreads(); 
+ 
+   // using reductions:    
+   int i = blockDim.x/2;
+   while (i != 0) {
+   if (cacheIndex < i)
+   if (cache[cacheIndex + i] > cache[cacheIndex])
+   cache[cacheIndex] = cache[cacheIndex + i];
+   __syncthreads();
+   i /= 2;
+   }
+   if (cacheIndex == 0)
+   result[blockIdx.x] = cache[0]; 
+   }
